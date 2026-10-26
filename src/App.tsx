@@ -4,7 +4,7 @@ import {
   ChartNoAxesCombined, Cloud, ShieldCheck, Search, Bell, ChevronDown,
   Menu, ArrowUpRight, ArrowDownRight, ShoppingCart, CircleDollarSign,
   Package, Users, Plus, Download, Clock3, CheckCircle2,
-  AlertTriangle, Zap, Database, Server, HardDrive, Activity, X,
+  AlertTriangle, Zap, Database, Server, HardDrive, Activity, X, Settings,
   FileText, CreditCard, Banknote, RefreshCw, TrendingUp, TrendingDown,
   ClipboardList, ArrowLeftRight, UserCheck, Lock, Eye,
 } from "lucide-react";
