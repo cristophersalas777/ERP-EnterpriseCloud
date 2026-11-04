@@ -291,8 +291,80 @@ function SearchableSelect({ label, items, value, onChange, placeholder }: {
   );
 }
 
+// ─── Login ───────────────────────────────────────────────────────────────────
+const CREDENTIALS: Record<string, { name: string; role: string; initials: string; id: number }> = {
+  "alezama@empresa.pe":  { name: "Ángel Lezama",   role: "Administrador", initials: "AL", id: 1 },
+  "mtorres@empresa.pe":  { name: "María Torres",   role: "Analista",      initials: "MT", id: 2 },
+  "cmendoza@empresa.pe": { name: "Carlos Mendoza", role: "Vendedor",      initials: "CM", id: 3 },
+  "jsalas@empresa.pe":   { name: "Jorge Salas",    role: "Vendedor",      initials: "JS", id: 5 },
+};
+const PASSWORD = "Demo1234";
+
+function LoginPage({ onLogin }: { onLogin: (user: { name: string; role: string; initials: string; id: number }) => void }) {
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError]       = useState("");
+  const [loading, setLoading]   = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    setTimeout(() => {
+      const user = CREDENTIALS[email.toLowerCase().trim()];
+      if (!user || password !== PASSWORD) {
+        setError("Correo o contraseña incorrectos.");
+        setLoading(false);
+        return;
+      }
+      onLogin(user);
+    }, 800);
+  };
+
+  return (
+    <div className="login-shell">
+      <div className="login-card">
+        <div className="login-brand">
+          <div className="login-brand-icon"><Zap size={26} fill="currentColor" /></div>
+          <div>
+            <strong>Enterprise<span>Cloud</span></strong>
+            <small>BUSINESS MANAGEMENT</small>
+          </div>
+        </div>
+
+        <h2 className="login-title">Iniciar sesión</h2>
+        <p className="login-subtitle">Ingresa tus credenciales para acceder al sistema.</p>
+
+        <form onSubmit={handleSubmit} className="login-form">
+          <label className="form-field">
+            <span>Correo electrónico</span>
+            <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="usuario@empresa.pe" />
+          </label>
+          <label className="form-field">
+            <span>Contraseña</span>
+            <input required type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+          </label>
+          {error && <p className="login-error">{error}</p>}
+          <button type="submit" className="button-primary login-btn" disabled={loading}>
+            {loading ? "Verificando..." : "Ingresar"}
+          </button>
+        </form>
+
+        <div className="login-demo">
+          <strong>Credenciales de demostración</strong>
+          <p>Correo: <code>alezama@empresa.pe</code></p>
+          <p>Contraseña: <code>Demo1234</code></p>
+        </div>
+
+        <p className="login-footer">© 2026 EnterpriseCloud · Sistema empresarial de demostración</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── App principal ────────────────────────────────────────────────────────────
 function App() {
+  const [session, setSession] = useState<{ name: string; role: string; initials: string; id: number } | null>(null);
   const [activePage, setActivePage] = useState("Dashboard ejecutivo");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -578,6 +650,8 @@ function App() {
 
   const lowStock = products.filter(p => p.stock < 10);
 
+  if (!session) return <LoginPage onLogin={setSession} />;
+
   return (
     <div className="app-shell">
       {sidebarOpen && <button className="mobile-backdrop" aria-label="Cerrar menú" onClick={() => setSidebarOpen(false)} />}
@@ -651,14 +725,15 @@ function App() {
             </div>
             <div className="profile-wrap">
               <button className="profile-button" onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); }}>
-                <div className="avatar">AL</div>
-                <div className="profile-info"><strong>Ángel Lezama</strong><small>Administrador</small></div>
+                <div className="avatar">{session.initials}</div>
+                <div className="profile-info"><strong>{session.name}</strong><small>{session.role}</small></div>
                 <ChevronDown size={16} />
               </button>
               {showProfile && (
                 <div className="profile-menu">
                   <button onClick={() => goTo("Administración y seguridad")}><Settings size={16} /> Configuración</button>
                   <button onClick={() => goTo("Administración y seguridad")}><ShieldCheck size={16} /> Mi perfil y permisos</button>
+                  <button onClick={() => setSession(null)} style={{ color: "#b33a3a" }}><X size={16} /> Cerrar sesión</button>
                 </div>
               )}
             </div>
