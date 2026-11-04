@@ -770,8 +770,9 @@ function App() {
                 <button className="button-primary" onClick={() => goTo("Dashboard ejecutivo")}>Volver al inicio</button>
               </div>
             );
-            return null;
-          })()}
+
+            // Solo renderiza el módulo si tiene acceso
+            return (<>
           {activePage === "Dashboard ejecutivo" ? (
             <DashboardPage onNavigate={goTo} onNewSale={() => setModal("venta")} sales={sales} products={products} customers={customers} receivables={receivables} payables={payables} />
           ) : activePage === "Gestión comercial" ? (
@@ -797,13 +798,14 @@ function App() {
             <AdminPage users={appUsers} auditLog={auditLog} onNewUser={() => setModal("usuario")}
               onToggleUser={(id) => {
                 const u = appUsers.find(u => u.id === id);
-                if (!u || id === 1) return; // No puede desactivar al administrador principal
+                if (!u || id === 1) return;
                 const newStatus = u.status === "Activo" ? "Inactivo" : "Activo";
                 setAppUsers(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
                 addAudit(`${newStatus === "Inactivo" ? "Desactivó" : "Reactivó"} usuario ${u.name}`, "Administración y seguridad");
               }}
             />
-          )}
+          </>);
+          })()}
         </div>
 
         <footer className="app-footer">
