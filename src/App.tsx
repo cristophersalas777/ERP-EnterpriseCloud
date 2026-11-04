@@ -762,7 +762,6 @@ function App() {
         </header>
 
         <div className="page-content">
-          {/* Verificación de acceso por rol */}
           {(() => {
             const allowedPages: Record<string, string[]> = {
               "Dashboard ejecutivo":       ["Administrador","Analista","Vendedor"],
@@ -785,9 +784,8 @@ function App() {
                 <button className="button-primary" onClick={() => goTo("Dashboard ejecutivo")}>Volver al inicio</button>
               </div>
             );
-
-            // Solo renderiza el módulo si tiene acceso
-            return (<>
+            return null;
+          })()}
           {activePage === "Dashboard ejecutivo" ? (
             <DashboardPage onNavigate={goTo} onNewSale={() => setModal("venta")} sales={sales} products={products} customers={customers} receivables={receivables} payables={payables} />
           ) : activePage === "Gestión comercial" ? (
@@ -819,8 +817,7 @@ function App() {
                 addAudit(`${newStatus === "Inactivo" ? "Desactivó" : "Reactivó"} usuario ${u.name}`, "Administración y seguridad");
               }}
             />
-          </>);
-          })()}
+          )}
         </div>
 
         <footer className="app-footer">
