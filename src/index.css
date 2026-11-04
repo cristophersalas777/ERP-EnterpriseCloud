@@ -2538,3 +2538,37 @@ td strong {
   font-size: 9px;
   margin: 0;
 }
+
+/* ── Acceso denegado ── */
+.access-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  gap: 12px;
+}
+.access-denied-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  background: #ffeded;
+  color: #b33a3a;
+  border-radius: 16px;
+  margin-bottom: 8px;
+}
+.access-denied h2 {
+  color: #1a2d47;
+  font-family: "Manrope", sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+}
+.access-denied p {
+  color: #8993a5;
+  font-size: 11px;
+  margin: 0;
+  line-height: 1.7;
+}

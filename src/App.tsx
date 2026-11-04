@@ -166,23 +166,29 @@ const salesData = [
 
 const WAREHOUSES = ["Almacén Principal", "Almacén Secundario", "Almacén Norte"];
 
-const navigation = [
-  { title: "GENERAL", items: [{ label: "Dashboard ejecutivo", icon: LayoutDashboard }] },
+const ALL_NAVIGATION = [
+  { title: "GENERAL", items: [{ label: "Dashboard ejecutivo", icon: LayoutDashboard }], roles: ["Administrador","Analista","Vendedor"] },
   { title: "GESTIÓN EMPRESARIAL", items: [
-    { label: "Gestión comercial",    icon: Handshake },
-    { label: "Abastecimiento",       icon: Truck },
-    { label: "Control de inventario",icon: Warehouse },
-    { label: "Gestión financiera",   icon: Landmark },
-    { label: "Centro documental",    icon: Files },
-  ]},
+    { label: "Gestión comercial",    icon: Handshake,  roles: ["Administrador","Analista","Vendedor"] },
+    { label: "Abastecimiento",       icon: Truck,      roles: ["Administrador","Analista"] },
+    { label: "Control de inventario",icon: Warehouse,  roles: ["Administrador","Analista","Vendedor"] },
+    { label: "Gestión financiera",   icon: Landmark,   roles: ["Administrador","Analista"] },
+    { label: "Centro documental",    icon: Files,      roles: ["Administrador","Analista"] },
+  ], roles: ["Administrador","Analista","Vendedor"] },
   { title: "ANÁLISIS Y CONTROL", items: [
-    { label: "Inteligencia de negocios", icon: ChartNoAxesCombined },
-    { label: "Centro Cloud",             icon: Cloud },
-  ]},
+    { label: "Inteligencia de negocios", icon: ChartNoAxesCombined, roles: ["Administrador","Analista"] },
+    { label: "Centro Cloud",             icon: Cloud,               roles: ["Administrador"] },
+  ], roles: ["Administrador","Analista"] },
   { title: "SISTEMA", items: [
-    { label: "Administración y seguridad", icon: ShieldCheck },
-  ]},
+    { label: "Administración y seguridad", icon: ShieldCheck, roles: ["Administrador"] },
+  ], roles: ["Administrador"] },
 ];
+
+const getNavigation = (role: string) =>
+  ALL_NAVIGATION
+    .filter(g => g.roles.includes(role))
+    .map(g => ({ ...g, items: g.items.filter(i => i.roles.includes(role)) }))
+    .filter(g => g.items.length > 0);
 
 // ─── Componentes UI reutilizables ─────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
@@ -671,7 +677,7 @@ function App() {
           <ChevronDown size={16} className="muted-icon" />
         </div>
         <nav className="navigation">
-          {navigation.map(group => (
+          {getNavigation(session.role).map(group => (
             <div className="nav-group" key={group.title}>
               <p className="nav-heading">{group.title}</p>
               {group.items.map(({ label, icon: Icon }) => (
@@ -741,6 +747,31 @@ function App() {
         </header>
 
         <div className="page-content">
+          {/* Verificación de acceso por rol */}
+          {(() => {
+            const allowedPages: Record<string, string[]> = {
+              "Dashboard ejecutivo":       ["Administrador","Analista","Vendedor"],
+              "Gestión comercial":         ["Administrador","Analista","Vendedor"],
+              "Abastecimiento":            ["Administrador","Analista"],
+              "Control de inventario":     ["Administrador","Analista","Vendedor"],
+              "Gestión financiera":        ["Administrador","Analista"],
+              "Centro documental":         ["Administrador","Analista"],
+              "Inteligencia de negocios":  ["Administrador","Analista"],
+              "Centro Cloud":              ["Administrador"],
+              "Administración y seguridad":["Administrador"],
+            };
+            const allowed = allowedPages[activePage]?.includes(session.role) ?? true;
+            if (!allowed) return (
+              <div className="access-denied">
+                <div className="access-denied-icon"><Lock size={32} /></div>
+                <h2>Acceso restringido</h2>
+                <p>Tu rol <strong>{session.role}</strong> no tiene permisos para acceder a <strong>{activePage}</strong>.</p>
+                <p>Contacta al administrador del sistema si necesitas acceso.</p>
+                <button className="button-primary" onClick={() => goTo("Dashboard ejecutivo")}>Volver al inicio</button>
+              </div>
+            );
+            return null;
+          })()}
           {activePage === "Dashboard ejecutivo" ? (
             <DashboardPage onNavigate={goTo} onNewSale={() => setModal("venta")} sales={sales} products={products} customers={customers} receivables={receivables} payables={payables} />
           ) : activePage === "Gestión comercial" ? (
