@@ -795,7 +795,7 @@ function App() {
           ) : activePage === "Centro Cloud" ? (
             <CloudPage />
           ) : (
-            <AdminPage users={appUsers} auditLog={auditLog} onNewUser={() => setModal("usuario")}
+            <AdminPage users={appUsers} auditLog={auditLog} onNewUser={() => setModal("usuario")} currentUserRole={session.role}
               onToggleUser={(id) => {
                 const u = appUsers.find(u => u.id === id);
                 if (!u || id === 1) return;
@@ -1851,7 +1851,7 @@ function CloudPage() {
 }
 
 // ─── Administración y Seguridad ───────────────────────────────────────────────
-function AdminPage({ users, auditLog, onNewUser, onToggleUser }: { users: AppUser[]; auditLog: AuditEntry[]; onNewUser: () => void; onToggleUser: (id: number) => void }) {
+function AdminPage({ users, auditLog, onNewUser, onToggleUser, currentUserRole }: { users: AppUser[]; auditLog: AuditEntry[]; onNewUser: () => void; onToggleUser: (id: number) => void; currentUserRole: string }) {
   const [tab, setTab] = useState("Usuarios");
 
   const roles = [
@@ -1884,7 +1884,7 @@ function AdminPage({ users, auditLog, onNewUser, onToggleUser }: { users: AppUse
           <CardHeading title="Usuarios del sistema" subtitle="Solo el administrador puede activar o desactivar usuarios. No se eliminan para mantener la trazabilidad." />
           <div className="table-wrap">
             <table>
-              <thead><tr><th>USUARIO</th><th>CORREO</th><th>ROL</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead>
+              <thead><tr><th>USUARIO</th><th>CORREO</th><th>ROL</th><th>ESTADO</th>{currentUserRole === "Administrador" && <th>ACCIÓN</th>}</tr></thead>
               <tbody>
                 {users.map(u => (
                   <tr key={u.id}>
@@ -1892,19 +1892,21 @@ function AdminPage({ users, auditLog, onNewUser, onToggleUser }: { users: AppUse
                     <td>{u.email}</td>
                     <td><span className="coming-tag">{u.role}</span></td>
                     <td><StatusBadge status={u.status} /></td>
-                    <td>
-                      {u.id === 1 ? (
-                        <span style={{ color: "#a0aab8", fontSize: 9 }}>Administrador principal</span>
-                      ) : (
-                        <button
-                          className={u.status === "Activo" ? "button-secondary" : "button-primary"}
-                          style={{ minHeight: 28, fontSize: 9, padding: "0 10px", color: u.status === "Activo" ? "#b33a3a" : undefined }}
-                          onClick={() => onToggleUser(u.id)}
-                        >
-                          {u.status === "Activo" ? "Desactivar" : "Reactivar"}
-                        </button>
-                      )}
-                    </td>
+                    {currentUserRole === "Administrador" && (
+                      <td>
+                        {u.id === 1 ? (
+                          <span style={{ color: "#a0aab8", fontSize: 9 }}>Administrador principal</span>
+                        ) : (
+                          <button
+                            className={u.status === "Activo" ? "button-secondary" : "button-primary"}
+                            style={{ minHeight: 28, fontSize: 9, padding: "0 10px", color: u.status === "Activo" ? "#b33a3a" : undefined }}
+                            onClick={() => onToggleUser(u.id)}
+                          >
+                            {u.status === "Activo" ? "Desactivar" : "Reactivar"}
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
