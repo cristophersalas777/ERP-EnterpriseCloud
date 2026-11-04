@@ -167,7 +167,7 @@ const salesData = [
 const WAREHOUSES = ["Almacén Principal", "Almacén Secundario", "Almacén Norte"];
 
 const ALL_NAVIGATION = [
-  { title: "GENERAL", items: [{ label: "Dashboard ejecutivo", icon: LayoutDashboard }], roles: ["Administrador","Analista","Vendedor"] },
+  { title: "GENERAL", items: [{ label: "Dashboard ejecutivo", icon: LayoutDashboard, roles: ["Administrador","Analista","Vendedor"] }], roles: ["Administrador","Analista","Vendedor"] },
   { title: "GESTIÓN EMPRESARIAL", items: [
     { label: "Gestión comercial",    icon: Handshake,  roles: ["Administrador","Analista","Vendedor"] },
     { label: "Abastecimiento",       icon: Truck,      roles: ["Administrador","Analista"] },
