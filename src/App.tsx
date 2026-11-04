@@ -370,7 +370,22 @@ function LoginPage({ onLogin }: { onLogin: (user: { name: string; role: string; 
 
 // ─── App principal ────────────────────────────────────────────────────────────
 function App() {
-  const [session, setSession] = useState<{ name: string; role: string; initials: string; id: number } | null>(null);
+  const [session, setSession] = useState<{ name: string; role: string; initials: string; id: number } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem("erp_session");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+
+  const handleLogin = (user: { name: string; role: string; initials: string; id: number }) => {
+    sessionStorage.setItem("erp_session", JSON.stringify(user));
+    setSession(user);
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("erp_session");
+    setSession(null);
+  };
   const [activePage, setActivePage] = useState("Dashboard ejecutivo");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -656,7 +671,7 @@ function App() {
 
   const lowStock = products.filter(p => p.stock < 10);
 
-  if (!session) return <LoginPage onLogin={setSession} />;
+  if (!session) return <LoginPage onLogin={handleLogin} />;
 
   return (
     <div className="app-shell">
@@ -739,7 +754,7 @@ function App() {
                 <div className="profile-menu">
                   <button onClick={() => goTo("Administración y seguridad")}><Settings size={16} /> Configuración</button>
                   <button onClick={() => goTo("Administración y seguridad")}><ShieldCheck size={16} /> Mi perfil y permisos</button>
-                  <button onClick={() => setSession(null)} style={{ color: "#b33a3a" }}><X size={16} /> Cerrar sesión</button>
+                  <button onClick={() => handleLogout()} style={{ color: "#b33a3a" }}><X size={16} /> Cerrar sesión</button>
                 </div>
               )}
             </div>
