@@ -372,18 +372,18 @@ function LoginPage({ onLogin }: { onLogin: (user: { name: string; role: string; 
 function App() {
   const [session, setSession] = useState<{ name: string; role: string; initials: string; id: number } | null>(() => {
     try {
-      const saved = sessionStorage.getItem("erp_session");
+      const saved = localStorage.getItem("erp_session");
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   });
 
   const handleLogin = (user: { name: string; role: string; initials: string; id: number }) => {
-    sessionStorage.setItem("erp_session", JSON.stringify(user));
+    localStorage.setItem("erp_session", JSON.stringify(user));
     setSession(user);
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("erp_session");
+    localStorage.removeItem("erp_session");
     setSession(null);
   };
   const [activePage, setActivePage] = useState("Dashboard ejecutivo");
