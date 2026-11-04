@@ -1692,26 +1692,55 @@ function DocumentosPage({ search, docs, invoices, purchaseOrders, onNewDoc }: {
 function AnalyticsPage({ sales, products, customers, receivables, payables, invoices, kardex }: {
   sales: Sale[]; products: Product[]; customers: Customer[]; receivables: Receivable[]; payables: Payable[]; invoices: Invoice[]; kardex: KardexEntry[];
 }) {
-  const totalVentas   = sales.filter(s => s.type === "Venta").reduce((a, s) => a + s.amount, 0);
-  const totalCompras  = sales.filter(s => s.type === "Compra").reduce((a, s) => a + s.amount, 0);
-  const margenBruto   = totalVentas - totalCompras;
-  const rotacion      = kardex.filter(k => k.type === "Salida").reduce((a, k) => a + k.qty, 0);
-  const ventasSolo    = sales.filter(s => s.type === "Venta");
-  const ticketProm    = ventasSolo.length > 0 ? totalVentas / ventasSolo.length : 0;
-  const cobradas      = invoices.filter(i => i.status === "Cobrada").length;
-  const cobradoRate   = invoices.length > 0 ? Math.round((cobradas / invoices.length) * 100) : 0;
+  const [tab, setTab] = useState("Resumen");
+  const ventasSolo   = sales.filter(s => s.type === "Venta");
+  const totalVentas  = ventasSolo.reduce((a, s) => a + s.amount, 0);
+  const totalCompras = sales.filter(s => s.type === "Compra").reduce((a, s) => a + s.amount, 0);
+  const margenBruto  = totalVentas - totalCompras;
+  const rotacion     = kardex.filter(k => k.type === "Salida").reduce((a, k) => a + k.qty, 0);
+  const ticketProm   = ventasSolo.length > 0 ? totalVentas / ventasSolo.length : 0;
+  const cobradas     = invoices.filter(i => i.status === "Cobrada").length;
+  const cobradoRate  = invoices.length > 0 ? Math.round((cobradas / invoices.length) * 100) : 0;
 
-  // Gráfica con datos reales: agrupa ventas y compras del sistema por mes
+  // ── Media aritmética ──
+  const montosVentas = ventasSolo.map(s => s.amount);
+  const sumaVentas   = montosVentas.reduce((a, v) => a + v, 0);
+  const media        = montosVentas.length > 0 ? sumaVentas / montosVentas.length : 0;
+
+  // ── Mediana ──
+  const sorted   = [...montosVentas].sort((a, b) => a - b);
+  const mid      = Math.floor(sorted.length / 2);
+  const mediana  = sorted.length === 0 ? 0
+    : sorted.length % 2 !== 0 ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2;
+
+  // ── Variables estadísticas ──
+  const variables = [
+    { nombre: "Monto de venta",         tipo: "Cuantitativa continua", ejemplo: money(media),              desc: "Importe registrado en cada operación de venta" },
+    { nombre: "Cantidad de productos",  tipo: "Cuantitativa discreta", ejemplo: `${Math.round(rotacion / (ventasSolo.length || 1))} un./venta`, desc: "Unidades vendidas por operación" },
+    { nombre: "Precio unitario",        tipo: "Cuantitativa continua", ejemplo: money(products.reduce((a,p) => a+p.price,0)/(products.length||1)), desc: "Precio de cada producto en catálogo" },
+    { nombre: "Estado del cliente",     tipo: "Cualitativa nominal",   ejemplo: "Activo / Pendiente",       desc: "Clasificación del cliente en el sistema" },
+    { nombre: "Categoría del producto", tipo: "Cualitativa nominal",   ejemplo: "Electrónica / Accesorios", desc: "Agrupación del producto por tipo" },
+    { nombre: "Stock disponible",       tipo: "Cuantitativa discreta", ejemplo: `${products.reduce((a,p) => a+p.stock,0)} un. totales`, desc: "Unidades disponibles en inventario" },
+  ];
+
+  // ── Bayes ──
+  const totalClientes    = customers.length;
+  const clientesActivos  = customers.filter(c => c.status === "Activo").length;
+  const clientesConVenta = [...new Set(ventasSolo.map(s => s.customerId))].filter(id => id > 0).length;
+  const pA      = totalClientes > 0 ? clientesActivos / totalClientes : 0;
+  const pB      = totalClientes > 0 ? clientesConVenta / totalClientes : 0;
+  const pBdadoA = clientesActivos > 0 ? Math.min(clientesConVenta / clientesActivos, 1) : 0;
+  const pAdadoB = pB > 0 ? (pBdadoA * pA) / pB : 0;
+
+  // ── Gráfica ──
   const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
   const monthMap: Record<string, { ventas: number; compras: number }> = {};
-  // Inicializar los últimos 6 meses
-  const now = new Date(2026, 9, 25); // Oct 2026
+  const now = new Date(2026, 9, 25);
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = MONTHS[d.getMonth()];
-    monthMap[key] = { ventas: 0, compras: 0 };
+    monthMap[MONTHS[d.getMonth()]] = { ventas: 0, compras: 0 };
   }
-  // Mapeo de nombres de mes en español a índice
   const esMonth: Record<string, number> = {
     "ene": 0, "feb": 1, "mar": 2, "abr": 3, "may": 4, "jun": 5,
     "jul": 6, "ago": 7, "sep": 8, "oct": 9, "nov": 10, "dic": 11,
@@ -1745,57 +1774,175 @@ function AnalyticsPage({ sales, products, customers, receivables, payables, invo
 
   return (
     <section>
-      <PageHeading eyebrow="ANÁLISIS Y CONTROL" title="Inteligencia de negocios"
-        description="Indicadores generados en tiempo real desde los datos del sistema: ventas, inventario, finanzas y clientes."
+      <PageHeading eyebrow="ANÁLISIS Y CONTROL / SEMANA 07" title="Inteligencia de negocios"
+        description="Los datos de ventas del sistema se convierten en estadísticas. Incluye media, mediana, variables estadísticas y Teorema de Bayes."
         actionLabel="Imprimir reporte" onAction={() => window.print()} />
 
       <div className="stats-grid stats-grid-four">
-        <StatCard icon={TrendingUp}        label="Ventas totales"     value={money(totalVentas)}    note="Acumulado del sistema"  positive trend="+12.8%" color="blue"   />
-        <StatCard icon={CircleDollarSign}  label="Margen bruto"       value={money(margenBruto)}    note="Ventas − compras"       color="green"  />
-        <StatCard icon={RefreshCw}         label="Unidades rotadas"   value={`${rotacion} un.`}     note="Salidas del inventario" color="violet" />
-        <StatCard icon={ShoppingCart}      label="Ticket promedio"    value={money(ticketProm)}     note="Por operación de venta" color="orange" />
+        <StatCard icon={TrendingUp}       label="Ventas totales"  value={money(totalVentas)}  note="Acumulado del sistema"   positive trend="+12.8%" color="blue"   />
+        <StatCard icon={CircleDollarSign} label="Media de ventas" value={money(media)}         note="Promedio aritmético"                             color="green"  />
+        <StatCard icon={RefreshCw}        label="Mediana"         value={money(mediana)}       note="Valor central de ventas"                         color="violet" />
+        <StatCard icon={ShoppingCart}     label="Ticket promedio" value={money(ticketProm)}    note="Por operación de venta"                          color="orange" />
       </div>
 
-      <div className="dashboard-grid">
-        <div className="content-card chart-card">
-          <CardHeading title="Ventas vs. Compras" subtitle="Datos reales del sistema — últimos 6 meses" />
-          <div className="analytics-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid stroke="#EDF0F5" strokeDasharray="4 4" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#8993A5" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#8993A5" }} axisLine={false} tickLine={false} tickFormatter={v => `${Number(v)/1000}k`} />
-                <Tooltip formatter={v => money(Number(v))} />
-                <Bar dataKey="ventas"  name="Ventas"  fill="#3578E5" radius={[5,5,0,0]} />
-                <Bar dataKey="compras" name="Compras" fill="#13B8A6" radius={[5,5,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="content-card">
-          <CardHeading title="KPIs financieros" subtitle="Indicadores clave calculados del sistema" />
-          <div className="kpi-list">
-            <div className="kpi-row"><span>Facturas cobradas</span><div className="report-track"><div style={{ width: `${cobradoRate}%` }} /></div><strong>{cobradoRate}%</strong></div>
-            <div className="kpi-row"><span>Clientes activos</span><div className="report-track"><div style={{ width: `${Math.round(customers.filter(c => c.status === "Activo").length / (customers.length || 1) * 100)}%` }} /></div><strong>{customers.filter(c => c.status === "Activo").length}/{customers.length}</strong></div>
-            <div className="kpi-row"><span>Stock suficiente</span><div className="report-track"><div style={{ width: `${Math.round(products.filter(p => p.stock >= 10).length / (products.length || 1) * 100)}%` }} /></div><strong>{products.filter(p => p.stock >= 10).length}/{products.length}</strong></div>
-            <div className="kpi-row"><span>CxC vencidas</span><div className="report-track"><div style={{ width: `${Math.round(receivables.filter(r => r.status === "Vencida").length / (receivables.length || 1) * 100)}%`, background: "#e05151" }} /></div><strong>{receivables.filter(r => r.status === "Vencida").length}</strong></div>
-          </div>
-        </div>
+      <div className="subnav">
+        {["Resumen","Variables estadísticas","Media y Mediana","Probabilidad y Bayes","Reportes"].map(t => (
+          <button key={t} className={tab === t ? "subnav-active" : ""} onClick={() => setTab(t)}>{t}</button>
+        ))}
       </div>
 
-      <div className="content-card">
-        <CardHeading title="Valor de inventario por categoría" subtitle="Stock valorizado en miles de soles (S/ miles)" />
-        <div className="report-list">
-          {categoryData.map(c => (
-            <div className="report-row" key={c.name}>
-              <span>{c.name}</span>
-              <div className="report-track"><div style={{ width: `${Math.round(c.value / maxCat * 100)}%` }} /></div>
-              <strong>S/ {c.value}k</strong>
+      {tab === "Resumen" && (<>
+        <div className="dashboard-grid">
+          <div className="content-card chart-card">
+            <CardHeading title="Ventas vs. Compras" subtitle="Datos reales del sistema — últimos 6 meses" />
+            <div className="analytics-chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top:10, right:10, left:-10, bottom:0 }}>
+                  <CartesianGrid stroke="#EDF0F5" strokeDasharray="4 4" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize:12, fill:"#8993A5" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize:11, fill:"#8993A5" }} axisLine={false} tickLine={false} tickFormatter={v => `${Number(v)/1000}k`} />
+                  <Tooltip formatter={v => money(Number(v))} />
+                  <Bar dataKey="ventas"  name="Ventas"  fill="#3578E5" radius={[5,5,0,0]} />
+                  <Bar dataKey="compras" name="Compras" fill="#13B8A6" radius={[5,5,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          ))}
+          </div>
+          <div className="content-card">
+            <CardHeading title="KPIs financieros" subtitle="Indicadores clave calculados del sistema" />
+            <div className="kpi-list">
+              <div className="kpi-row"><span>Facturas cobradas</span><div className="report-track"><div style={{ width:`${cobradoRate}%` }} /></div><strong>{cobradoRate}%</strong></div>
+              <div className="kpi-row"><span>Clientes activos</span><div className="report-track"><div style={{ width:`${Math.round(customers.filter(c=>c.status==="Activo").length/(customers.length||1)*100)}%` }} /></div><strong>{customers.filter(c=>c.status==="Activo").length}/{customers.length}</strong></div>
+              <div className="kpi-row"><span>Stock suficiente</span><div className="report-track"><div style={{ width:`${Math.round(products.filter(p=>p.stock>=10).length/(products.length||1)*100)}%` }} /></div><strong>{products.filter(p=>p.stock>=10).length}/{products.length}</strong></div>
+              <div className="kpi-row"><span>Margen bruto</span><div className="report-track"><div style={{ width:`${Math.min(100,Math.round((margenBruto/totalVentas||0)*100))}%` }} /></div><strong>{money(margenBruto)}</strong></div>
+            </div>
+          </div>
         </div>
-      </div>
+        <div className="content-card">
+          <CardHeading title="Valor de inventario por categoría" subtitle="Stock valorizado en miles de soles" />
+          <div className="report-list">
+            {categoryData.map(c => (
+              <div className="report-row" key={c.name}>
+                <span>{c.name}</span>
+                <div className="report-track"><div style={{ width:`${Math.round(c.value/maxCat*100)}%` }} /></div>
+                <strong>S/ {c.value}k</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>)}
+
+      {tab === "Variables estadísticas" && (
+        <div className="content-card">
+          <CardHeading title="Variables estadísticas del sistema" subtitle="Clasificación de variables — Semana 07" />
+          <div className="info-banner" style={{ marginBottom:20 }}>
+            <TrendingUp size={20} />
+            <div><strong>¿Qué es una variable estadística?</strong><p>Característica que puede tomar diferentes valores. Se clasifican en cuantitativas (numéricas) y cualitativas (categorías).</p></div>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>VARIABLE</th><th>TIPO</th><th>VALOR EN EL SISTEMA</th><th>DESCRIPCIÓN</th></tr></thead>
+              <tbody>
+                {variables.map(v => (
+                  <tr key={v.nombre}>
+                    <td><strong>{v.nombre}</strong></td>
+                    <td><span className="coming-tag">{v.tipo}</span></td>
+                    <td className="amount-cell">{v.ejemplo}</td>
+                    <td style={{ color:"#7a8499", fontSize:10 }}>{v.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === "Media y Mediana" && (
+        <div className="content-card">
+          <CardHeading title="Media y Mediana de ventas" subtitle="Cálculo paso a paso con datos reales del sistema — Semana 07" />
+          <div className="stat-procedure">
+            <div className="procedure-block">
+              <h4>📊 Media aritmética</h4>
+              <p className="procedure-formula">media = (x₁ + x₂ + ... + xₙ) / n</p>
+              <div className="procedure-steps">
+                <div className="procedure-step"><span className="step-label">Datos (montos de venta):</span><span>{sorted.map(v => money(v)).join(" + ") || "Sin datos"}</span></div>
+                <div className="procedure-step"><span className="step-label">Suma total:</span><span>{money(sumaVentas)}</span></div>
+                <div className="procedure-step"><span className="step-label">Cantidad de ventas (n):</span><span>{montosVentas.length}</span></div>
+                <div className="procedure-step highlight"><span className="step-label">Media = {money(sumaVentas)} / {montosVentas.length} =</span><strong>{money(media)}</strong></div>
+              </div>
+              <p className="procedure-insight">💡 El monto promedio por venta es {money(media)}. Representa el ticket típico de la empresa.</p>
+            </div>
+            <div className="procedure-block">
+              <h4>📊 Mediana</h4>
+              <p className="procedure-formula">Ordenar valores → encontrar el valor central</p>
+              <div className="procedure-steps">
+                <div className="procedure-step"><span className="step-label">Datos ordenados:</span><span>{sorted.map((v,i) => <span key={i} style={i===mid?{fontWeight:800,color:"#3578e5"}:{}}>{money(v)}{i<sorted.length-1?", ":""}</span>)}</span></div>
+                <div className="procedure-step"><span className="step-label">n = {sorted.length}:</span><span>{sorted.length%2!==0?"impar → valor central directo":"par → promedio de los dos centrales"}</span></div>
+                <div className="procedure-step highlight"><span className="step-label">Mediana =</span><strong>{money(mediana)}</strong></div>
+              </div>
+              <p className="procedure-insight">💡 {media>mediana?`La media (${money(media)}) es mayor que la mediana (${money(mediana)}). Hay ventas altas que elevan el promedio.`:media<mediana?`La media (${money(media)}) es menor que la mediana (${money(mediana)}). La mayoría de ventas superan el promedio.`:`Media y mediana son iguales (${money(media)}). Distribución simétrica.`}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "Probabilidad y Bayes" && (
+        <div className="content-card">
+          <CardHeading title="Teorema de Bayes aplicado" subtitle="Probabilidad de que un cliente que compró sea activo — Semana 07" />
+          <div className="info-banner" style={{ marginBottom:20 }}>
+            <TrendingUp size={20} />
+            <div><strong>P(A|B) = P(B|A) × P(A) / P(B)</strong><p>Calcula la probabilidad de un evento A dado que ocurrió B, usando probabilidades previas.</p></div>
+          </div>
+          <div className="stat-procedure">
+            <div className="procedure-block">
+              <h4>📋 Definición del problema</h4>
+              <div className="procedure-steps">
+                <div className="procedure-step"><span className="step-label">Evento A:</span><span>El cliente está activo en el sistema</span></div>
+                <div className="procedure-step"><span className="step-label">Evento B:</span><span>El cliente tiene al menos una venta registrada</span></div>
+                <div className="procedure-step"><span className="step-label">Pregunta:</span><span>¿Cuál es la probabilidad de que un cliente que compró sea activo?</span></div>
+              </div>
+            </div>
+            <div className="procedure-block">
+              <h4>🔢 Datos del sistema</h4>
+              <div className="procedure-steps">
+                <div className="procedure-step"><span className="step-label">Total clientes:</span><span>{totalClientes}</span></div>
+                <div className="procedure-step"><span className="step-label">Clientes activos:</span><span>{clientesActivos}</span></div>
+                <div className="procedure-step"><span className="step-label">Clientes con ventas:</span><span>{clientesConVenta}</span></div>
+              </div>
+            </div>
+            <div className="procedure-block">
+              <h4>🧮 Cálculo paso a paso</h4>
+              <div className="procedure-steps">
+                <div className="procedure-step"><span className="step-label">P(A) = {clientesActivos}/{totalClientes} =</span><strong>{(pA*100).toFixed(1)}%</strong></div>
+                <div className="procedure-step"><span className="step-label">P(B) = {clientesConVenta}/{totalClientes} =</span><strong>{(pB*100).toFixed(1)}%</strong></div>
+                <div className="procedure-step"><span className="step-label">P(B|A) = {clientesConVenta}/{clientesActivos} =</span><strong>{(pBdadoA*100).toFixed(1)}%</strong></div>
+                <div className="procedure-step highlight"><span className="step-label">P(A|B) = {(pBdadoA*100).toFixed(2)}% × {(pA*100).toFixed(2)}% / {(pB*100).toFixed(2)}% =</span><strong>{(pAdadoB*100).toFixed(1)}%</strong></div>
+              </div>
+              <p className="procedure-insight">💡 La probabilidad de que un cliente que realizó una compra sea activo es del <strong>{(pAdadoB*100).toFixed(1)}%</strong>. Los clientes activos son quienes generan las ventas.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "Reportes" && (
+        <div className="content-card">
+          <CardHeading title="Reporte estadístico de ventas" subtitle="Resumen de todos los análisis calculados del sistema" />
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>ANÁLISIS</th><th>FÓRMULA</th><th>RESULTADO</th><th>INTERPRETACIÓN</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Media aritmética</strong></td><td className="code-cell">Σx / n</td><td className="amount-cell">{money(media)}</td><td style={{fontSize:10,color:"#7a8499"}}>Ticket promedio de venta</td></tr>
+                <tr><td><strong>Mediana</strong></td><td className="code-cell">Valor central ordenado</td><td className="amount-cell">{money(mediana)}</td><td style={{fontSize:10,color:"#7a8499"}}>Venta más representativa</td></tr>
+                <tr><td><strong>Margen bruto</strong></td><td className="code-cell">Ventas − Compras</td><td className="amount-cell">{money(margenBruto)}</td><td style={{fontSize:10,color:"#7a8499"}}>Resultado operativo</td></tr>
+                <tr><td><strong>P(A) clientes activos</strong></td><td className="code-cell">Activos / Total</td><td className="amount-cell">{(pA*100).toFixed(1)}%</td><td style={{fontSize:10,color:"#7a8499"}}>Proporción de clientes activos</td></tr>
+                <tr><td><strong>P(B) clientes con venta</strong></td><td className="code-cell">Con venta / Total</td><td className="amount-cell">{(pB*100).toFixed(1)}%</td><td style={{fontSize:10,color:"#7a8499"}}>Clientes que ya compraron</td></tr>
+                <tr><td><strong>P(A|B) — Teorema de Bayes</strong></td><td className="code-cell">P(B|A)×P(A)/P(B)</td><td className="amount-cell">{(pAdadoB*100).toFixed(1)}%</td><td style={{fontSize:10,color:"#7a8499"}}>Prob. cliente activo dado que compró</td></tr>
+                <tr><td><strong>Total ventas analizadas</strong></td><td className="code-cell">n</td><td className="amount-cell">{ventasSolo.length}</td><td style={{fontSize:10,color:"#7a8499"}}>Observaciones del dataset</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
