@@ -2603,3 +2603,14 @@ td strong {
   display: block; background: #edf0f5; color: #3578e5; padding: 4px 8px;
   border-radius: 5px; font-size: 10px; font-family: monospace;
 }
+
+.import-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 28px 20px; cursor: pointer;
+  border: 2px dashed #c5d8f5; border-radius: 10px;
+  background: #f6f9ff; color: #4c7fd0; transition: all 0.2s ease;
+  text-align: center;
+}
+.import-dropzone:hover { background: #edf3ff; border-color: #7ca8ef; }
+.import-dropzone strong { color: #25334a; font-size: 12px; }
+.import-dropzone span { color: #8993a5; font-size: 10px; }

@@ -984,21 +984,25 @@ function App() {
                 <div className="import-info">
                   <FileText size={32} />
                   <div>
-                    <strong>Importar usuarios desde archivo</strong>
-                    <p>Sube un archivo CSV con los datos de los usuarios. El sistema los registrará automáticamente con rol Vendedor.</p>
+                    <strong>Importar usuarios desde archivo CSV</strong>
+                    <p>El sistema registrará los usuarios automáticamente. Cada usuario recibirá el rol asignado en el archivo.</p>
                   </div>
                 </div>
                 <div className="import-format">
-                  <strong>Formato requerido del archivo:</strong>
+                  <strong>Formato requerido:</strong>
                   <code>nombre,correo,rol</code>
                   <code>Ana García,agarcia@empresa.pe,Vendedor</code>
                   <code>Luis Pérez,lperez@empresa.pe,Analista</code>
                 </div>
-                <FormField label="Seleccionar archivo CSV">
-                  <input type="file" accept=".csv" onChange={e => setFName(e.target.files?.[0]?.name ?? "")} />
-                </FormField>
-                {fName && <p className="form-disclaimer">Archivo seleccionado: <strong>{fName}</strong> — Se importarán los usuarios al confirmar.</p>}
-                <p className="form-disclaimer">Esta es una demostración. Los usuarios se simularán como importados y quedarán registrados en Auditoría.</p>
+                <label className="import-dropzone">
+                  <input type="file" accept=".csv" style={{ display:"none" }} onChange={e => setFName(e.target.files?.[0]?.name ?? "")} />
+                  <Download size={28} />
+                  {fName
+                    ? <><strong>{fName}</strong><span>Archivo listo para importar</span></>
+                    : <><strong>Seleccionar archivo CSV</strong><span>Click para buscar en tu equipo</span></>
+                  }
+                </label>
+                <p className="form-disclaimer">Al confirmar se importarán los usuarios y la acción quedará registrada en Auditoría.</p>
               </>)}
 
               <div className="modal-actions">
