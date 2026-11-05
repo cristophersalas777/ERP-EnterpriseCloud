@@ -411,7 +411,7 @@ function App() {
   const [appUsers, setAppUsers] = useState<AppUser[]>(INIT_USERS);
 
   // Modal activo
-  type ModalType = "cliente"|"proveedor"|"cotizacion"|"venta"|"producto"|"ordencompra"|"recepcion"|"transferencia"|"cobro"|"pago"|"usuario"|"documento"|null;
+  type ModalType = "cliente"|"proveedor"|"cotizacion"|"venta"|"producto"|"ordencompra"|"recepcion"|"transferencia"|"cobro"|"pago"|"usuario"|"documento"|"importar"|null;
   const [modal, setModal] = useState<ModalType>(null);
 
   // Campos del formulario
@@ -602,6 +602,18 @@ function App() {
       setCashEntries(prev => [entry, ...prev]);
       addAudit(`Registró pago de ${pay.poId}`, "Gestión financiera");
       goTo("Gestión financiera");
+    }
+
+    if (modal === "importar") {
+      // Simula importar 3 usuarios desde el CSV
+      const importados: AppUser[] = [
+        { id: Math.max(0, ...appUsers.map(u => u.id)) + 1, initials: "AG", name: "Ana García López",  role: "Vendedor", email: "agarcia@empresa.pe",  status: "Activo" },
+        { id: Math.max(0, ...appUsers.map(u => u.id)) + 2, initials: "LP", name: "Luis Pérez Torres",  role: "Analista", email: "lperez@empresa.pe",   status: "Activo" },
+        { id: Math.max(0, ...appUsers.map(u => u.id)) + 3, initials: "MS", name: "María Soto Quispe",  role: "Vendedor", email: "msoto@empresa.pe",    status: "Activo" },
+      ];
+      setAppUsers(prev => [...prev, ...importados]);
+      addAudit(`Importó ${importados.length} usuarios desde archivo CSV`, "Administración y seguridad");
+      goTo("Administración y seguridad");
     }
 
     if (modal === "usuario") {
@@ -808,7 +820,7 @@ function App() {
           ) : activePage === "Centro Cloud" ? (
             <CloudPage />
           ) : (
-            <AdminPage users={appUsers} auditLog={auditLog} onNewUser={() => setModal("usuario")} currentUserRole={session.role}
+            <AdminPage users={appUsers} auditLog={auditLog} onNewUser={() => setModal("usuario")} currentUserRole={session.role} onImportUsers={() => setModal("importar")}
               onToggleUser={(id) => {
                 const u = appUsers.find(u => u.id === id);
                 if (!u || id === 1) return;
@@ -833,7 +845,7 @@ function App() {
             <div className="modal-header">
               <div>
                 <span className="eyebrow">ENTERPRISECLOUD</span>
-                <h2>{{ cliente:"Nuevo cliente", proveedor:"Nuevo proveedor", cotizacion:"Nueva cotización", venta:"Registrar venta", producto:"Nuevo producto", ordencompra:"Orden de compra", recepcion:"Recibir mercadería", transferencia:"Transferencia de stock", cobro:"Registrar cobro", pago:"Registrar pago", usuario:"Nuevo usuario", documento:"Registrar documento" }[modal]}</h2>
+                <h2>{{ cliente:"Nuevo cliente", proveedor:"Nuevo proveedor", cotizacion:"Nueva cotización", venta:"Registrar venta", producto:"Nuevo producto", ordencompra:"Orden de compra", recepcion:"Recibir mercadería", transferencia:"Transferencia de stock", cobro:"Registrar cobro", pago:"Registrar pago", usuario:"Nuevo usuario", documento:"Registrar documento", importar:"Importar usuarios" }[modal]}</h2>
                 <p>Completa los datos del formulario.</p>
               </div>
               <button className="icon-button" onClick={resetModal} aria-label="Cerrar"><X size={20} /></button>
@@ -966,6 +978,27 @@ function App() {
                   <input required value={fRuc} onChange={e => setFRuc(e.target.value)} placeholder="Ej. OC-2026-0320 o CTR-2026-005" />
                 </FormField>
                 <p className="form-disclaimer">El documento quedará registrado en el repositorio. La acción se registrará en Auditoría.</p>
+              </>)}
+
+              {modal === "importar" && (<>
+                <div className="import-info">
+                  <FileText size={32} />
+                  <div>
+                    <strong>Importar usuarios desde archivo</strong>
+                    <p>Sube un archivo CSV con los datos de los usuarios. El sistema los registrará automáticamente con rol Vendedor.</p>
+                  </div>
+                </div>
+                <div className="import-format">
+                  <strong>Formato requerido del archivo:</strong>
+                  <code>nombre,correo,rol</code>
+                  <code>Ana García,agarcia@empresa.pe,Vendedor</code>
+                  <code>Luis Pérez,lperez@empresa.pe,Analista</code>
+                </div>
+                <FormField label="Seleccionar archivo CSV">
+                  <input type="file" accept=".csv" onChange={e => setFName(e.target.files?.[0]?.name ?? "")} />
+                </FormField>
+                {fName && <p className="form-disclaimer">Archivo seleccionado: <strong>{fName}</strong> — Se importarán los usuarios al confirmar.</p>}
+                <p className="form-disclaimer">Esta es una demostración. Los usuarios se simularán como importados y quedarán registrados en Auditoría.</p>
               </>)}
 
               <div className="modal-actions">
@@ -2010,7 +2043,7 @@ function CloudPage() {
 }
 
 // ─── Administración y Seguridad ───────────────────────────────────────────────
-function AdminPage({ users, auditLog, onNewUser, onToggleUser, currentUserRole }: { users: AppUser[]; auditLog: AuditEntry[]; onNewUser: () => void; onToggleUser: (id: number) => void; currentUserRole: string }) {
+function AdminPage({ users, auditLog, onNewUser, onToggleUser, currentUserRole, onImportUsers }: { users: AppUser[]; auditLog: AuditEntry[]; onNewUser: () => void; onToggleUser: (id: number) => void; currentUserRole: string; onImportUsers: () => void }) {
   const [tab, setTab] = useState("Usuarios");
 
   const roles = [
@@ -2021,9 +2054,21 @@ function AdminPage({ users, auditLog, onNewUser, onToggleUser, currentUserRole }
 
   return (
     <section>
-      <PageHeading eyebrow="SISTEMA / GOBIERNO Y CONTROL" title="Administración y seguridad"
-        description="Gestiona usuarios, roles, permisos y el registro de auditoría de todas las operaciones del sistema."
-        actionLabel="Nuevo usuario" onAction={onNewUser} />
+      <div className="welcome-row page-heading">
+        <div>
+          <div className="eyebrow">SISTEMA / GOBIERNO Y CONTROL</div>
+          <h1>Administración y seguridad<span className="title-period">.</span></h1>
+          <p>Gestiona usuarios, roles, permisos y el registro de auditoría de todas las operaciones del sistema.</p>
+        </div>
+        <div className="heading-actions">
+          <button className="button-secondary" onClick={onImportUsers}>
+            <Download size={17} /> Importar usuarios
+          </button>
+          <button className="button-primary" onClick={onNewUser}>
+            <Plus size={18} /> Nuevo usuario
+          </button>
+        </div>
+      </div>
 
       <div className="stats-grid stats-grid-four">
         <StatCard icon={Users}      label="Usuarios activos"    value={String(users.filter(u => u.status === "Activo").length)} note="De un total de 5"             color="blue"   />

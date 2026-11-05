@@ -2585,3 +2585,21 @@ td strong {
 .step-label { color: #657389; font-weight: 700; flex-shrink: 0; }
 .procedure-insight { margin: 0; padding: 10px 12px; background: #f0fff8; border: 1px solid #c3f0da; border-radius: 7px; color: #1a6b4a; font-size: 10px; line-height: 1.6; }
 .median-highlight { font-weight: 800; color: #3578e5; }
+
+/* ── Importar usuarios ── */
+.import-info {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 16px; background: #edf3ff; border: 1px solid #d4e5ff; border-radius: 9px;
+  color: #3578e5;
+}
+.import-info > div strong { display: block; color: #1a3a6b; font-size: 12px; margin-bottom: 5px; }
+.import-info > div p { margin: 0; color: #5577a4; font-size: 10px; line-height: 1.6; }
+.import-format {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 12px; background: #f6f8fb; border: 1px solid #e2e7ef; border-radius: 8px;
+}
+.import-format strong { color: #536176; font-size: 10px; margin-bottom: 4px; }
+.import-format code {
+  display: block; background: #edf0f5; color: #3578e5; padding: 4px 8px;
+  border-radius: 5px; font-size: 10px; font-family: monospace;
+}
